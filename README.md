@@ -35,35 +35,6 @@ Handcrafted Haven is an innovative web application that provides a platform for 
 - **Responsive:** Mobile-first design, optimized for smartphones, tablets, and desktops.
 - **Accessible:** Targets WCAG 2.1 Level AA compliance throughout.
 
-## 🚀 Getting Started
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) (v18 or higher)
-- [Git](https://git-scm.com/)
-
-### Installation
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/Joka7w7/Handcrafted-Haven.git
-
-# 2. Navigate into the project folder
-cd Handcrafted-Haven
-
-# 3. Install dependencies
-npm install
-
-# 4. Start the development server
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser to view the app.
-
-## 📋 Project Board
-
-Work items and progress are tracked on the [GitHub Project Board](https://github.com/Joka7w7/Handcrafted-Haven/projects).
-
 ## 📄 License
 
 This project was created as part of a BYU-Idaho course assignment.
