@@ -28,7 +28,7 @@ Handcrafted Haven is an innovative web application that provides a platform for 
 | Project Management | GitHub Projects (Kanban) |
 | Version Control | Git & GitHub |
 
-## 🎨 Design
+## 🎨 Design 
 
 - **Color palette:** Earthy, warm tones — browns, creams, and muted greens that evoke the handmade aesthetic.
 - **Typography:** Playfair Display (headings) + Inter (body/UI)
