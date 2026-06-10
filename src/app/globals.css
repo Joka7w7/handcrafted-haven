@@ -1259,3 +1259,22 @@ button { cursor: pointer; font-family: inherit; border: none; }
   .listings-table-header > *:nth-child(4),
   .listings-table-row   > *:nth-child(4) { display: none; }
 }
+
+/* Screen reader only — hides visually but keeps accessible to screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+ 
+/* Search input focus ring */
+.navbar-search input:focus {
+  border-color: var(--brown-deep);
+  box-shadow: 0 0 0 3px rgba(92, 61, 46, 0.1);
+}

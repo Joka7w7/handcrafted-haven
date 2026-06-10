@@ -1,12 +1,50 @@
 // src/app/(auth)/login/page.tsx
-import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Log in — Handcrafted Haven",
-  description: "Log in to your Handcrafted Haven account.",
-};
+"use client";
+
+import { useState } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo   = searchParams.get("redirect") ?? "/";
+  const justSignedUp = searchParams.get("signup") === "success";
+
+  const [error,   setError]   = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    const form  = new FormData(e.currentTarget);
+    const email    = form.get("email")    as string;
+    const password = form.get("password") as string;
+
+    const res = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+
+    setLoading(false);
+
+    if (res?.error) {
+      setError("Invalid email or password. Please try again.");
+      return;
+    }
+
+    router.push(redirectTo);
+    router.refresh();
+  }
+
+  async function handleGoogle() {
+    await signIn("google", { callbackUrl: redirectTo });
+  }
+
   return (
     <div className="auth-wrapper">
       <div className="auth-card">
@@ -14,7 +52,43 @@ export default function LoginPage() {
         <h1 className="auth-title">Welcome back</h1>
         <p className="auth-sub">Log in to your Handcrafted Haven account</p>
 
-        <form className="auth-form" action="/api/auth/login" method="POST">
+        {/* Success message after signup */}
+        {justSignedUp && (
+          <div
+            role="status"
+            style={{
+              background: "#E1F5EE",
+              color: "#085041",
+              border: "1px solid #5DCAA5",
+              borderRadius: "6px",
+              padding: "0.65rem 0.85rem",
+              fontSize: "0.85rem",
+              marginBottom: "1rem",
+            }}
+          >
+            Account created! Please log in below.
+          </div>
+        )}
+
+        {/* Error message */}
+        {error && (
+          <div
+            role="alert"
+            style={{
+              background: "#FAECE7",
+              color: "#4A1B0C",
+              border: "1px solid #F0997B",
+              borderRadius: "6px",
+              padding: "0.65rem 0.85rem",
+              fontSize: "0.85rem",
+              marginBottom: "1rem",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <form className="auth-form" onSubmit={handleSubmit}>
           <div className="field">
             <label htmlFor="email">Email address</label>
             <input
@@ -47,17 +121,18 @@ export default function LoginPage() {
             <a href="/forgot-password" className="link-muted">Forgot password?</a>
           </div>
 
-          <button type="submit" className="btn-auth">Log in</button>
+          <button type="submit" className="btn-auth" disabled={loading}>
+            {loading ? "Logging in…" : "Log in"}
+          </button>
         </form>
-
-        <p className="auth-footer">
-          Don&apos;t have an account?{" "}
-          <a href="/signup" className="link-accent">Sign up free</a>
-        </p>
 
         <div className="divider"><span>or</span></div>
 
-        <button type="button" className="btn-social">
+        <button
+          type="button"
+          className="btn-social"
+          onClick={handleGoogle}
+        >
           <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -66,6 +141,11 @@ export default function LoginPage() {
           </svg>
           Continue with Google
         </button>
+
+        <p className="auth-footer">
+          Don&apos;t have an account?{" "}
+          <a href="/signup" className="link-accent">Sign up free</a>
+        </p>
       </div>
     </div>
   );

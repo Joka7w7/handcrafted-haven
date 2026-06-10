@@ -1,46 +1,81 @@
-// ─────────────────────────────────────────────────────────
-// FILE 1: src/app/seller/dashboard/page.tsx
-// Protected page — shows logged-in seller's stats & listings
-// ─────────────────────────────────────────────────────────
 import type { Metadata } from "next";
- 
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import type { Product, OrderItem, Review } from "@prisma/client";
+
 export const metadata: Metadata = {
   title: "Seller Dashboard — Handcrafted Haven",
 };
- 
-const MOCK_LISTINGS = [
-  { id: 1, emoji: "🏺", bg: "#C4956A", name: "Hand-thrown Terracotta Bowl",  category: "Pottery",  price: 48,  stock: 12, status: "active",  orders: 7  },
-  { id: 2, emoji: "🌿", bg: "#8BAB7E", name: "Dried Lavender Bundle",         category: "Botanicals", price: 18, stock: 30, status: "active", orders: 14 },
-  { id: 3, emoji: "🕯️", bg: "#C9A87C", name: "Soy Lavender Pillar Candle",   category: "Candles",  price: 28,  stock: 0,  status: "draft",   orders: 0  },
-];
- 
-export default function SellerDashboard() {
+
+export default async function SellerDashboard() {
+  const session = await auth();
+
+  if (!session?.user) redirect("/login");
+
+  const seller = await prisma.sellerProfile.findUnique({
+    where: { userId: session.user.id },
+    include: {
+      products: {
+        orderBy: { createdAt: "desc" },
+      },
+    },
+  });
+
+  if (!seller) redirect("/");
+
+  // ── Compute stats from real data ──────────────────────────────────────
+  const activeListings = seller.products.filter((p: Product) => p.isActive).length;
+  const draftListings  = seller.products.filter((p: Product) => !p.isActive).length;
+
+  // Pull all orders for this seller's products
+  const orderItems = await prisma.orderItem.findMany({
+    where: { product: { sellerId: seller.id } },
+    include: { order: true },
+  });
+
+  const totalOrders  = orderItems.length;
+  const totalRevenue = orderItems.reduce(
+  (sum: number, item: OrderItem) => sum + item.price * item.quantity, 0
+);
+
+  // Reviews across all products
+  const reviews = await prisma.review.findMany({
+    where: { product: { sellerId: seller.id } },
+  });
+  const avgRating =
+    reviews.length > 0
+      ? reviews.reduce((sum: number, r: Review) => sum + r.rating, 0) / reviews.length
+      : 0;
+
+  const stats = [
+    { label: "Total revenue",    value: `$${totalRevenue.toFixed(2)}`,              change: `${totalOrders} orders total` },
+    { label: "Active listings",  value: String(activeListings),                     change: draftListings > 0 ? `${draftListings} draft` : "All active" },
+    { label: "Total orders",     value: String(totalOrders),                        change: `Across ${seller.products.length} products` },
+    { label: "Avg. rating",      value: avgRating > 0 ? `${avgRating.toFixed(1)}★` : "No reviews yet", change: `From ${reviews.length} reviews` },
+  ];
+
   return (
     <main>
       <div className="container dashboard-layout">
- 
+
         <div className="dashboard-header">
           <div>
             <p style={{ fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-light)", marginBottom: "0.25rem" }}>
               Seller dashboard
             </p>
             <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.75rem", color: "var(--brown-deep)" }}>
-              Welcome back, Jose
+              Welcome back, {seller.shopName}
             </h1>
           </div>
           <a href="/seller/products/new" className="btn-primary">
             + Add new product
           </a>
         </div>
- 
+
         {/* Stats */}
         <div className="stats-grid" role="region" aria-label="Sales statistics">
-          {[
-            { label: "Total sales",    value: "$842",  change: "+12% this month" },
-            { label: "Active listings", value: "3",    change: "1 draft" },
-            { label: "Total orders",    value: "21",   change: "+4 this week" },
-            { label: "Avg. rating",     value: "4.8★", change: "From 32 reviews" },
-          ].map((s) => (
+          {stats.map((s) => (
             <div key={s.label} className="stat-card">
               <p className="stat-card-label">{s.label}</p>
               <p className="stat-card-value">{s.value}</p>
@@ -48,7 +83,7 @@ export default function SellerDashboard() {
             </div>
           ))}
         </div>
- 
+
         {/* Listings table */}
         <div className="listings-table" role="region" aria-label="Your product listings">
           <div className="listings-table-header" aria-hidden="true">
@@ -58,34 +93,47 @@ export default function SellerDashboard() {
             <span>Status</span>
             <span>Actions</span>
           </div>
-          {MOCK_LISTINGS.map((item) => (
-            <div key={item.id} className="listings-table-row" role="row">
-              <div className="listing-product">
-                <div className="listing-thumb" style={{ background: item.bg }} aria-hidden="true">
-                  {item.emoji}
-                </div>
-                <div>
-                  <p className="listing-name">{item.name}</p>
-                  <p className="listing-category">{item.category}</p>
-                </div>
-              </div>
-              <span>${item.price.toFixed(2)}</span>
-              <span>{item.stock} left</span>
-              <span>
-                <span className={`status-pill ${item.status === "active" ? "status-active" : "status-draft"}`}>
-                  {item.status}
-                </span>
-              </span>
-              <div className="row-actions">
-                <a href={`/seller/products/${item.id}/edit`} className="action-btn">Edit</a>
-                <button className="action-btn" aria-label={`Delete ${item.name}`}>Del</button>
-              </div>
+
+          {seller.products.length === 0 ? (
+            <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-mid)" }}>
+              No products yet. <a href="/seller/products/new" style={{ color: "var(--brown-deep)" }}>Add your first listing →</a>
             </div>
-          ))}
+          ) : (
+            seller.products.map((item: Product) => {
+              const firstImage = item.imageUrls?.split(",")[0] ?? null;
+              return (
+                <div key={item.id} className="listings-table-row" role="row">
+                  <div className="listing-product">
+                    <div className="listing-thumb" aria-hidden="true">
+                      {firstImage ? (
+                        <img src={firstImage} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "6px" }} />
+                      ) : (
+                        <span style={{ fontSize: "1.5rem" }}>🏺</span>
+                      )}
+                    </div>
+                    <div>
+                      <p className="listing-name">{item.title}</p>
+                      <p className="listing-category">{item.category ?? "—"}</p>
+                    </div>
+                  </div>
+                  <span>${item.price.toFixed(2)}</span>
+                  <span>{item.stock} left</span>
+                  <span>
+                    <span className={`status-pill ${item.isActive ? "status-active" : "status-draft"}`}>
+                      {item.isActive ? "active" : "draft"}
+                    </span>
+                  </span>
+                  <div className="row-actions">
+                    <a href={`/seller/products/${item.id}/edit`} className="action-btn">Edit</a>
+                    <button className="action-btn" aria-label={`Delete ${item.title}`}>Del</button>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
- 
+
       </div>
     </main>
   );
 }
- 

@@ -1,6 +1,7 @@
 // src/app/page.tsx
 
 import type { Metadata } from "next";
+import { AddToCartButton } from "@/components/AddToCartButton";
 
 export const metadata: Metadata = {
   title: "Handcrafted Haven — Discover Unique Artisan Goods",
@@ -80,41 +81,6 @@ export default function HomePage() {
   return (
     <>
       {/* ── Navbar ── */}
-      <header className="navbar" role="banner">
-        <div className="container navbar-inner">
-          <a href="/" className="navbar-logo" aria-label="Handcrafted Haven home">
-            🧶 Handcrafted<span>Haven</span>
-          </a>
-
-          <nav className="navbar-search" role="search">
-            <label htmlFor="site-search" className="sr-only">Search products and artisans</label>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-            </svg>
-            <input
-              id="site-search"
-              type="search"
-              placeholder="Search products, artisans…"
-              aria-label="Search products and artisans"
-            />
-          </nav>
-
-          <div className="navbar-actions">
-            <a href="/shop"    className="nav-link">Shop</a>
-            <a href="/seller" className="nav-link">Sell</a>
-            <button className="cart-btn" aria-label="Shopping cart, 2 items">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-                <line x1="3" y1="6" x2="21" y2="6"/>
-                <path d="M16 10a4 4 0 0 1-8 0"/>
-              </svg>
-              <span className="cart-badge" aria-hidden="true">2</span>
-            </button>
-            <a href="/login"   className="btn-outline">Log in</a>
-            <a href="/signup"  className="btn-primary">Sign up</a>
-          </div>
-        </div>
-      </header>
 
       <main id="main-content">
 
@@ -237,9 +203,14 @@ export default function HomePage() {
                         <span className="rating-count">({p.reviews})</span>
                       </div>
                     </div>
-                    <button className="product-cart-btn" aria-label={`Add ${p.name} to cart`}>
-                      Add to Cart
-                    </button>
+                    <AddToCartButton
+                      id={String(p.id)}
+                      name={p.name}
+                      seller={p.seller}
+                      price={Number(p.price)} 
+                      emoji={p.emoji}
+                      bg={p.bg}
+                    />
                   </div>
                 </article>
               ))}

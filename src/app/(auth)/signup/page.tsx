@@ -1,12 +1,54 @@
 // src/app/(auth)/signup/page.tsx
+
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Create account — Handcrafted Haven",
-  description: "Join Handcrafted Haven to buy or sell unique handcrafted goods.",
-};
-
 export default function SignupPage() {
+  const router = useRouter();
+  const [error,   setError]   = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    const form = new FormData(e.currentTarget);
+    const body = {
+      firstName: form.get("firstName"),
+      lastName:  form.get("lastName"),
+      email:     form.get("email"),
+      password:  form.get("password"),
+      role:      form.get("role"),
+    };
+
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(body),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+
+      // Signup succeeded — redirect to login
+      router.push("/login?signup=success");
+
+    } catch (err) {
+      setError("Network error. Please check your connection.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="auth-wrapper">
       <div className="auth-card">
@@ -14,7 +56,25 @@ export default function SignupPage() {
         <h1 className="auth-title">Create your account</h1>
         <p className="auth-sub">Join thousands of artisans and buyers</p>
 
-        <form className="auth-form" action="/api/auth/signup" method="POST">
+        {/* Error message */}
+        {error && (
+          <div
+            role="alert"
+            style={{
+              background: "#FAECE7",
+              color: "#4A1B0C",
+              border: "1px solid #F0997B",
+              borderRadius: "6px",
+              padding: "0.65rem 0.85rem",
+              fontSize: "0.85rem",
+              marginBottom: "1rem",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <form className="auth-form" onSubmit={handleSubmit}>
           <div className="field-row-half">
             <div className="field">
               <label htmlFor="firstName">First name</label>
@@ -22,7 +82,7 @@ export default function SignupPage() {
             </div>
             <div className="field">
               <label htmlFor="lastName">Last name</label>
-              <input id="lastName" type="text" name="lastName" placeholder="Chanax" required autoComplete="family-name" />
+              <input id="lastName" type="text" name="lastName" placeholder="Chanax" autoComplete="family-name" />
             </div>
           </div>
 
@@ -37,10 +97,10 @@ export default function SignupPage() {
           </div>
 
           <div className="field">
-            <label className="field-label-row">
-              Account type
-              <span className="field-hint">You can also sell later from your settings</span>
-            </label>
+            <div className="field-label-row">
+              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-dark)" }}>Account type</span>
+              <span className="field-hint">You can also sell later from settings</span>
+            </div>
             <div className="role-grid">
               <label className="role-card">
                 <input type="radio" name="role" value="buyer" defaultChecked />
@@ -60,11 +120,16 @@ export default function SignupPage() {
           <div className="field">
             <label className="checkbox-label">
               <input type="checkbox" name="terms" required />
-              <span>I agree to the <a href="/terms" className="link-accent">Terms of Service</a> and <a href="/privacy" className="link-accent">Privacy Policy</a></span>
+              <span>
+                I agree to the <a href="/terms" className="link-accent">Terms of Service</a> and{" "}
+                <a href="/privacy" className="link-accent">Privacy Policy</a>
+              </span>
             </label>
           </div>
 
-          <button type="submit" className="btn-auth">Create account</button>
+          <button type="submit" className="btn-auth" disabled={loading}>
+            {loading ? "Creating account…" : "Create account"}
+          </button>
         </form>
 
         <p className="auth-footer">
