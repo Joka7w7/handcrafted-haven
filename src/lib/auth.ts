@@ -51,22 +51,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    // ── This is what the middleware uses to decide access ──
-    authorized({ auth, request }) {
-      const isLoggedIn  = !!auth?.user;
-      const isSellerPath = request.nextUrl.pathname.startsWith("/seller");
-
-      if (isSellerPath) {
-        if (isLoggedIn) return true;
-        // Redirect to login preserving the destination
-        const loginUrl = new URL("/login", request.nextUrl.origin);
-        loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
-        return Response.redirect(loginUrl);
-      }
-
-      return true;
-    },
-
     async jwt({ token, user }) {
       if (user) {
         token.id   = user.id;
@@ -74,7 +58,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return token;
     },
-
     async session({ session, token }) {
       if (session.user) {
         session.user.id          = token.id as string;
