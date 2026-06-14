@@ -22,8 +22,8 @@ export default async function SellerDashboard() {
   });
 
   const firstName = session.user.name?.split(" ")[0] ?? "there";
-  const active    = products.filter((p) => p.isActive === true).length;
-  const inactive  = products.filter((p) => p.isActive === false).length;
+  const active    = products.filter((p) => p.status === "active").length;
+  const drafts    = products.filter((p) => p.status === "draft").length;
 
   return (
     <main>
@@ -46,10 +46,10 @@ export default async function SellerDashboard() {
         {/* Stats */}
         <div className="stats-grid" role="region" aria-label="Sales statistics">
           {[
-            { label: "Active listings", value: String(active),          change: `${inactive} inactive`        },
-            { label: "Total products",  value: String(products.length), change: "All time"                    },
-            { label: "Total orders",    value: "0",                     change: "Orders coming soon"          },
-            { label: "Avg. rating",     value: "—",                     change: "No reviews yet"              },
+            { label: "Active listings", value: String(active),          change: `${drafts} draft${drafts !== 1 ? "s" : ""}` },
+            { label: "Total products",  value: String(products.length), change: "All time"           },
+            { label: "Total orders",    value: "0",                     change: "Orders coming soon" },
+            { label: "Avg. rating",     value: "—",                     change: "No reviews yet"     },
           ].map((s) => (
             <div key={s.label} className="stat-card">
               <p className="stat-card-label">{s.label}</p>
@@ -93,20 +93,20 @@ export default async function SellerDashboard() {
                     🏺
                   </div>
                   <div>
-                    <p className="listing-name">{item.title}</p>
-                    <p className="listing-category">{item.category ?? "—"}</p>
+                    <p className="listing-name">{item.name}</p>
+                    <p className="listing-category">{item.category}</p>
                   </div>
                 </div>
                 <span>${item.price.toFixed(2)}</span>
                 <span>{item.stock} left</span>
                 <span>
-                  <span className={`status-pill ${item.isActive ? "status-active" : "status-draft"}`}>
-                    {item.isActive ? "active" : "inactive"}
+                  <span className={`status-pill ${item.status === "active" ? "status-active" : "status-draft"}`}>
+                    {item.status}
                   </span>
                 </span>
                 <div className="row-actions">
                   <a href={`/seller/products/${item.id}/edit`} className="action-btn">Edit</a>
-                  <button className="action-btn" aria-label={`Delete ${item.title}`}>Del</button>
+                  <button className="action-btn" aria-label={`Delete ${item.name}`}>Del</button>
                 </div>
               </div>
             ))
