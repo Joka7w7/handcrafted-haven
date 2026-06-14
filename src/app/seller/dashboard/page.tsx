@@ -1,8 +1,9 @@
+// src/app/seller/dashboard/page.tsx
+
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { Product, OrderItem, Review } from "@prisma/client";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Seller Dashboard — Handcrafted Haven",
@@ -11,49 +12,18 @@ export const metadata: Metadata = {
 export default async function SellerDashboard() {
   const session = await auth();
 
-  if (!session?.user) redirect("/login");
+  if (!session?.user?.id) {
+    redirect("/login?redirect=/seller/dashboard");
+  }
 
-  const seller = await prisma.sellerProfile.findUnique({
-    where: { userId: session.user.id },
-    include: {
-      products: {
-        orderBy: { createdAt: "desc" },
-      },
-    },
+  const products = await prisma.product.findMany({
+    where:   { sellerId: session.user.id },
+    orderBy: { createdAt: "desc" },
   });
 
-  if (!seller) redirect("/");
-
-  // ── Compute stats from real data ──────────────────────────────────────
-  const activeListings = seller.products.filter((p: Product) => p.isActive).length;
-  const draftListings  = seller.products.filter((p: Product) => !p.isActive).length;
-
-  // Pull all orders for this seller's products
-  const orderItems = await prisma.orderItem.findMany({
-    where: { product: { sellerId: seller.id } },
-    include: { order: true },
-  });
-
-  const totalOrders  = orderItems.length;
-  const totalRevenue = orderItems.reduce(
-  (sum: number, item: OrderItem) => sum + item.price * item.quantity, 0
-);
-
-  // Reviews across all products
-  const reviews = await prisma.review.findMany({
-    where: { product: { sellerId: seller.id } },
-  });
-  const avgRating =
-    reviews.length > 0
-      ? reviews.reduce((sum: number, r: Review) => sum + r.rating, 0) / reviews.length
-      : 0;
-
-  const stats = [
-    { label: "Total revenue",    value: `$${totalRevenue.toFixed(2)}`,              change: `${totalOrders} orders total` },
-    { label: "Active listings",  value: String(activeListings),                     change: draftListings > 0 ? `${draftListings} draft` : "All active" },
-    { label: "Total orders",     value: String(totalOrders),                        change: `Across ${seller.products.length} products` },
-    { label: "Avg. rating",      value: avgRating > 0 ? `${avgRating.toFixed(1)}★` : "No reviews yet", change: `From ${reviews.length} reviews` },
-  ];
+  const firstName = session.user.name?.split(" ")[0] ?? "there";
+  const active    = products.filter((p) => p.isActive === true).length;
+  const inactive  = products.filter((p) => p.isActive === false).length;
 
   return (
     <main>
@@ -65,7 +35,7 @@ export default async function SellerDashboard() {
               Seller dashboard
             </p>
             <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.75rem", color: "var(--brown-deep)" }}>
-              Welcome back, {seller.shopName}
+              Welcome back, {firstName}
             </h1>
           </div>
           <a href="/seller/products/new" className="btn-primary">
@@ -75,7 +45,12 @@ export default async function SellerDashboard() {
 
         {/* Stats */}
         <div className="stats-grid" role="region" aria-label="Sales statistics">
-          {stats.map((s) => (
+          {[
+            { label: "Active listings", value: String(active),          change: `${inactive} inactive`        },
+            { label: "Total products",  value: String(products.length), change: "All time"                    },
+            { label: "Total orders",    value: "0",                     change: "Orders coming soon"          },
+            { label: "Avg. rating",     value: "—",                     change: "No reviews yet"              },
+          ].map((s) => (
             <div key={s.label} className="stat-card">
               <p className="stat-card-label">{s.label}</p>
               <p className="stat-card-value">{s.value}</p>
@@ -94,42 +69,47 @@ export default async function SellerDashboard() {
             <span>Actions</span>
           </div>
 
-          {seller.products.length === 0 ? (
-            <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-mid)" }}>
-              No products yet. <a href="/seller/products/new" style={{ color: "var(--brown-deep)" }}>Add your first listing →</a>
+          {products.length === 0 ? (
+            <div style={{ padding: "3rem", textAlign: "center", color: "var(--text-mid)" }}>
+              <p style={{ fontFamily: "'Playfair Display', serif", color: "var(--brown-deep)", marginBottom: "0.5rem" }}>
+                No products yet
+              </p>
+              <p style={{ fontSize: "0.88rem", marginBottom: "1rem" }}>
+                Add your first product to start selling.
+              </p>
+              <a href="/seller/products/new" className="btn-primary">
+                + Add product
+              </a>
             </div>
           ) : (
-            seller.products.map((item: Product) => {
-              const firstImage = item.imageUrls?.split(",")[0] ?? null;
-              return (
-                <div key={item.id} className="listings-table-row" role="row">
-                  <div className="listing-product">
-                    <div className="listing-thumb" aria-hidden="true">
-                      {firstImage ? (
-                        <img src={firstImage} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "6px" }} />
-                      ) : (
-                        <span style={{ fontSize: "1.5rem" }}>🏺</span>
-                      )}
-                    </div>
-                    <div>
-                      <p className="listing-name">{item.title}</p>
-                      <p className="listing-category">{item.category ?? "—"}</p>
-                    </div>
+            products.map((item) => (
+              <div key={item.id} className="listings-table-row" role="row">
+                <div className="listing-product">
+                  <div
+                    className="listing-thumb"
+                    style={{ background: "var(--terracotta)" }}
+                    aria-hidden="true"
+                  >
+                    🏺
                   </div>
-                  <span>${item.price.toFixed(2)}</span>
-                  <span>{item.stock} left</span>
-                  <span>
-                    <span className={`status-pill ${item.isActive ? "status-active" : "status-draft"}`}>
-                      {item.isActive ? "active" : "draft"}
-                    </span>
-                  </span>
-                  <div className="row-actions">
-                    <a href={`/seller/products/${item.id}/edit`} className="action-btn">Edit</a>
-                    <button className="action-btn" aria-label={`Delete ${item.title}`}>Del</button>
+                  <div>
+                    <p className="listing-name">{item.title}</p>
+                    <p className="listing-category">{item.category ?? "—"}</p>
                   </div>
                 </div>
-              );
-            })
+                <span>${item.price.toFixed(2)}</span>
+                <span>{item.stock} left</span>
+                <span>
+                  <span className={`status-pill ${item.isActive ? "status-active" : "status-draft"}`}>
+                    {item.isActive ? "active" : "inactive"}
+                  </span>
+                </span>
+                <div className="row-actions">
+                  <a href={`/seller/products/${item.id}/edit`} className="action-btn">Edit</a>
+                  <button className="action-btn" aria-label={`Delete ${item.title}`}>Del</button>
+                </div>
+              </div>
+            ))
           )}
         </div>
 
