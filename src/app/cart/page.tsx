@@ -1,26 +1,31 @@
 // src/app/cart/page.tsx
-// Full cart page with order summary
- 
+// Updated — checkout button now goes to confirmation page directly
+
 "use client";
- 
+
 import { useCart } from "@/context/CartContext";
-import type { Metadata } from "next";
- 
+import { useRouter } from "next/navigation";
+
 export default function CartPage() {
   const { items, removeItem, updateQty, subtotal, clearCart } = useCart();
- 
+  const router = useRouter();
+
   const shipping = subtotal > 75 ? 0 : 8.99;
   const tax      = subtotal * 0.08;
   const total    = subtotal + shipping + tax;
- 
+
+  function handleCheckout() {
+    router.push("/checkout/confirmation");
+  }
+
   return (
     <main>
       <div className="container" style={{ padding: "3rem 1.5rem" }}>
- 
+
         <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.75rem", color: "var(--brown-deep)", marginBottom: "2rem" }}>
           Shopping Cart
         </h1>
- 
+
         {items.length === 0 ? (
           <div style={{ textAlign: "center", padding: "5rem 1rem" }}>
             <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🛍️</div>
@@ -34,7 +39,7 @@ export default function CartPage() {
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "2rem", alignItems: "start" }}>
- 
+
             {/* Cart items */}
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
@@ -48,7 +53,7 @@ export default function CartPage() {
                   Clear cart
                 </button>
               </div>
- 
+
               {items.map((item) => (
                 <div
                   key={item.id}
@@ -73,7 +78,7 @@ export default function CartPage() {
                   >
                     {item.emoji}
                   </div>
- 
+
                   <div>
                     <p style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--text-dark)", marginBottom: "2px" }}>
                       {item.name}
@@ -97,7 +102,7 @@ export default function CartPage() {
                       >+</button>
                     </div>
                   </div>
- 
+
                   <div style={{ textAlign: "right" }}>
                     <p style={{ fontWeight: 700, color: "var(--brown-deep)", fontSize: "1rem", marginBottom: "8px" }}>
                       ${(item.price * item.quantity).toFixed(2)}
@@ -113,7 +118,7 @@ export default function CartPage() {
                 </div>
               ))}
             </div>
- 
+
             {/* Order summary */}
             <div
               style={{
@@ -128,12 +133,12 @@ export default function CartPage() {
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.1rem", color: "var(--brown-deep)", marginBottom: "1.25rem" }}>
                 Order summary
               </h2>
- 
+
               <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "1.25rem" }}>
                 {[
-                  { label: "Subtotal", value: `$${subtotal.toFixed(2)}` },
-                  { label: "Shipping", value: shipping === 0 ? "Free" : `$${shipping.toFixed(2)}` },
-                  { label: "Estimated tax", value: `$${tax.toFixed(2)}` },
+                  { label: "Subtotal",       value: `$${subtotal.toFixed(2)}` },
+                  { label: "Shipping",       value: shipping === 0 ? "Free" : `$${shipping.toFixed(2)}` },
+                  { label: "Estimated tax",  value: `$${tax.toFixed(2)}` },
                 ].map((row) => (
                   <div key={row.label} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.88rem", color: "var(--text-mid)" }}>
                     <span>{row.label}</span>
@@ -143,29 +148,33 @@ export default function CartPage() {
                   </div>
                 ))}
               </div>
- 
+
               {subtotal < 75 && (
                 <p style={{ fontSize: "0.78rem", color: "var(--sage)", background: "#E1F5EE", padding: "0.5rem 0.75rem", borderRadius: "6px", marginBottom: "1rem" }}>
                   Add ${(75 - subtotal).toFixed(2)} more for free shipping!
                 </p>
               )}
- 
+
               <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--border)", marginBottom: "1.25rem" }}>
                 <span style={{ color: "var(--text-dark)" }}>Total</span>
                 <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.2rem", color: "var(--brown-deep)" }}>
                   ${total.toFixed(2)}
                 </span>
               </div>
- 
-              <a href="/checkout" className="btn-primary" style={{ display: "block", textAlign: "center", width: "100%" }}>
-                Proceed to Checkout
-              </a>
- 
+
+              <button
+                onClick={handleCheckout}
+                className="btn-primary"
+                style={{ display: "block", textAlign: "center", width: "100%", border: "none", cursor: "pointer" }}
+              >
+                Place Order
+              </button>
+
               <a href="/shop" style={{ display: "block", textAlign: "center", marginTop: "0.75rem", fontSize: "0.85rem", color: "var(--text-mid)" }}>
                 ← Continue shopping
               </a>
             </div>
- 
+
           </div>
         )}
       </div>

@@ -1278,3 +1278,108 @@ button { cursor: pointer; font-family: inherit; border: none; }
   border-color: var(--brown-deep);
   box-shadow: 0 0 0 3px rgba(92, 61, 46, 0.1);
 }
+
+/* ── Accessibility fixes to append to globals.css ─────
+   US-14: WCAG 2.1 AA — contrast, focus states, ARIA
+──────────────────────────────────────────────────────── */
+
+/* Skip to main content link — hidden until focused */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  background: var(--brown-deep);
+  color: var(--cream);
+  padding: 0.5rem 1rem;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  z-index: 999;
+  transition: top 0.2s;
+}
+.skip-link:focus {
+  top: 0;
+  outline: 3px solid var(--terracotta);
+  outline-offset: 2px;
+}
+
+/* Visible focus ring on all interactive elements */
+:focus-visible {
+  outline: 3px solid var(--brown-deep);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+/* Remove focus ring for mouse users only */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Ensure buttons always have pointer cursor */
+button:not(:disabled) { cursor: pointer; }
+
+/* Disabled state */
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Minimum touch target size — WCAG 2.5.5 */
+button,
+a,
+[role="button"] {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Override for inline links that shouldn't be 44px tall */
+p a,
+.footer-links a,
+.auth-footer a,
+.nav-link,
+.link-accent,
+.link-muted {
+  min-height: unset;
+  min-width: unset;
+  display: inline;
+}
+
+/* High contrast text — ensure AA ratio */
+.product-seller { color: #6B5E56; }  /* was text-light, now darker */
+.rating-count   { color: #6B5E56; }
+.stat-lbl       { color: #6B5E56; }
+
+/* Cart badge accessible contrast */
+.cart-badge {
+  background: var(--brown-deep);
+  color: var(--cream);
+}
+
+/* Focus ring on card links */
+.product-card a:focus-visible,
+.artisan-card:focus-visible,
+.category-card:focus-visible {
+  outline: 3px solid var(--brown-deep);
+  outline-offset: 3px;
+}
+
+/* Form input error state */
+.field input[aria-invalid="true"] {
+  border-color: #C0392B;
+}
+
+/* Smooth scroll only when user hasn't requested reduced motion */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

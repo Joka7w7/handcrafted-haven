@@ -10,9 +10,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Auth.js (NextAuth v5) uses "authjs" in cookie names, not "next-auth"
-  // Production (HTTPS): __Secure-authjs.session-token
-  // Development (HTTP):  authjs.session-token
   const sessionToken =
     request.cookies.get("__Secure-authjs.session-token")?.value ??
     request.cookies.get("authjs.session-token")?.value;
