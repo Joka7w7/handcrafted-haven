@@ -11,8 +11,6 @@ export const metadata: Metadata = {
   keywords: ["handcrafted", "artisan", "marketplace", "handmade", "crafts"],
 };
 
-/* ─── Static Data ─────────────────────────────────────── */
-
 const categories = [
   { icon: "🏺", name: "Pottery",    count: 124 },
   { icon: "💍", name: "Jewelry",    count: 238 },
@@ -24,28 +22,15 @@ const categories = [
   { icon: "🌿", name: "Botanicals", count: 59  },
 ];
 
-const artisans = [
-  { emoji: "👩‍🎨", bg: "#E8C4A0", name: "Maria Santos", craft: "Pottery",  items: 34 },
-  { emoji: "💎",  bg: "#D4C4E0", name: "Luna Park",    craft: "Jewelry",  items: 51 },
-  { emoji: "🧶",  bg: "#C4D4B0", name: "Anya Weaver",  craft: "Textiles", items: 22 },
-  { emoji: "🔨",  bg: "#D0B8A0", name: "James Oak",    craft: "Woodwork", items: 18 },
-];
-
-/* ─── Category emoji fallback map ────────────────────── */
-
 const categoryEmoji: Record<string, string> = {
-  Pottery:    "🏺",
-  Jewelry:    "💍",
-  Textiles:   "🧵",
-  Candles:    "🕯️",
-  Art:        "🖼️",
-  Woodwork:   "🪵",
-  Toys:       "🧸",
-  Botanicals: "🌿",
-  Other:      "🛍️",
+  Pottery: "🏺", Jewelry: "💍", Textiles: "🧵", Candles: "🕯️",
+  Art: "🖼️", Woodwork: "🪵", Toys: "🧸", Botanicals: "🌿", Other: "🛍️",
 };
 
-/* ─── Component ───────────────────────────────────────── */
+const craftEmoji: Record<string, string> = {
+  Pottery: "🏺", Jewelry: "💎", Textiles: "🧶", Woodwork: "🔨",
+  Candles: "🕯️", Art: "🖼️", Toys: "🧸", Botanicals: "🌿",
+};
 
 export default async function HomePage() {
   const featuredProducts = await prisma.product.findMany({
@@ -53,6 +38,16 @@ export default async function HomePage() {
     orderBy: { createdAt: "desc" },
     take:    6,
     include: { seller: { select: { name: true } } },
+  });
+
+  // Fetch real sellers from DB using their actual user ID
+  const sellers = await prisma.user.findMany({
+    where:  { role: "seller" },
+    take:   4,
+    include: {
+      seller: true,
+      _count: { select: { products: true } },
+    },
   });
 
   return (
@@ -76,18 +71,9 @@ export default async function HomePage() {
                 <a href="/seller/dashboard" className="btn-outline">Start Selling</a>
               </div>
               <div className="hero-stats fade-up fade-up-3" aria-label="Platform statistics">
-                <div>
-                  <p className="stat-val">2,400+</p>
-                  <p className="stat-lbl">Artisans</p>
-                </div>
-                <div>
-                  <p className="stat-val">18k+</p>
-                  <p className="stat-lbl">Products</p>
-                </div>
-                <div>
-                  <p className="stat-val">94%</p>
-                  <p className="stat-lbl">5-Star Reviews</p>
-                </div>
+                <div><p className="stat-val">2,400+</p><p className="stat-lbl">Artisans</p></div>
+                <div><p className="stat-val">18k+</p><p className="stat-lbl">Products</p></div>
+                <div><p className="stat-val">94%</p><p className="stat-lbl">5-Star Reviews</p></div>
               </div>
             </div>
 
@@ -169,25 +155,13 @@ export default async function HomePage() {
                       ) : (
                         <div
                           className="product-img-bg"
-                          style={{
-                            background: "var(--border)",
-                            height: "100%",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "3rem",
-                          }}
+                          style={{ background: "var(--border)", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "3rem" }}
                           aria-hidden="true"
                         >
                           {categoryEmoji[p.category] ?? "🛍️"}
                         </div>
                       )}
-                      <button
-                        className="product-wishlist"
-                        aria-label={`Save ${p.name} to wishlist`}
-                      >
-                        🤍
-                      </button>
+                      <button className="product-wishlist" aria-label={`Save ${p.name} to wishlist`}>🤍</button>
                     </div>
                     <div className="product-info">
                       <p className="product-seller">{p.seller.name}</p>
@@ -213,7 +187,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* ── Featured Artisans ── */}
+        {/* ── Featured Artisans — real DB data with correct IDs ── */}
         <section className="artisans-section" aria-labelledby="artisans-heading">
           <div className="container">
             <div className="section-header">
@@ -222,27 +196,34 @@ export default async function HomePage() {
                 <h2 className="section-title" id="artisans-heading">Featured Artisans</h2>
                 <p className="section-sub">Real people, real craft — discover the stories behind the pieces.</p>
               </div>
-              <a href="/artisans" className="btn-outline">All artisans</a>
             </div>
             <div className="artisans-grid" role="list">
-              {artisans.map((a) => (
+              {sellers.map((s) => (
                 <a
-                  key={a.name}
-                  href={`/sellers/${a.name.toLowerCase().replace(" ", "-")}`}
+                  key={s.id}
+                  href={`/sellers/${s.id}`}
                   className="artisan-card"
                   role="listitem"
-                  aria-label={`${a.name} — ${a.craft} seller with ${a.items} items`}
+                  aria-label={`${s.name} — ${s.seller?.craft ?? "Artisan"} with ${s._count.products} items`}
                 >
                   <div
                     className="artisan-avatar"
-                    style={{ background: a.bg }}
+                    style={{ background: "var(--terracotta)", overflow: "hidden" }}
                     aria-hidden="true"
                   >
-                    {a.emoji}
+                    {s.image ? (
+                      <img
+                        src={s.image}
+                        alt=""
+                        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }}
+                      />
+                    ) : (
+                      craftEmoji[s.seller?.craft ?? ""] ?? "🧑‍🎨"
+                    )}
                   </div>
-                  <p className="artisan-name">{a.name}</p>
-                  <p className="artisan-craft">{a.craft}</p>
-                  <p className="artisan-items">{a.items} listings</p>
+                  <p className="artisan-name">{s.name}</p>
+                  <p className="artisan-craft">{s.seller?.craft ?? "Artisan"}</p>
+                  <p className="artisan-items">{s._count.products} listings</p>
                 </a>
               ))}
             </div>
@@ -269,25 +250,22 @@ export default async function HomePage() {
             <div>
               <p className="footer-brand">🧶 Handcrafted Haven</p>
               <p className="footer-desc">
-                A marketplace dedicated to connecting talented artisans with
-                customers who value the beauty and quality of handmade goods.
+                A marketplace dedicated to connecting talented artisans with customers who value the beauty and quality of handmade goods.
               </p>
             </div>
             <div>
               <p className="footer-col-title">Shop</p>
               <ul className="footer-links">
                 <li><a href="/shop">All Products</a></li>
-                <li><a href="/shop?sort=new">New Arrivals</a></li>
-                <li><a href="/shop?sort=bestseller">Bestsellers</a></li>
+                <li><a href="/shop?sort=newest">New Arrivals</a></li>
                 <li><a href="/artisans">Artisans</a></li>
               </ul>
             </div>
             <div>
               <p className="footer-col-title">Sell</p>
               <ul className="footer-links">
-                <li><a href="/signup?role=seller">Start Selling</a></li>
-                <li><a href="/seller-guide">Seller Guide</a></li>
-                <li><a href="/seller-faq">FAQ</a></li>
+                <li><a href="/signup">Start Selling</a></li>
+                <li><a href="/seller/dashboard">Dashboard</a></li>
               </ul>
             </div>
             <div>
@@ -302,6 +280,7 @@ export default async function HomePage() {
           </div>
           <div className="footer-bottom">
             <p>© {new Date().getFullYear()} Handcrafted Haven. All rights reserved.</p>
+            <p>Jose Chanax | 2026</p>
             <p>Made with ♥ for artisans everywhere.</p>
           </div>
         </div>
