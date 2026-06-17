@@ -15,7 +15,7 @@ Jose Chanax
 | **Application (Vercel)** | https://handcrafted-haven.vercel.app |
 | **GitHub Repository** | https://github.com/Joka7w7/Handcrafted-Haven |
 | **GitHub Project Board** | https://github.com/Joka7w7/Handcrafted-Haven/projects |
-| **Demonstration Video** | *(paste your video URL here after recording)* |
+| **Demonstration Video** | https://youtu.be/-6CCjA9ZqhU |
  
 ---
  
