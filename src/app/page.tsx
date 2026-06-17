@@ -1,6 +1,7 @@
 // src/app/page.tsx
 
 import type { Metadata } from "next";
+import { prisma } from "@/lib/prisma";
 import { AddToCartButton } from "@/components/AddToCartButton";
 
 export const metadata: Metadata = {
@@ -10,78 +11,52 @@ export const metadata: Metadata = {
   keywords: ["handcrafted", "artisan", "marketplace", "handmade", "crafts"],
 };
 
-/* ─── Data ────────────────────────────────────────────── */
+/* ─── Static Data ─────────────────────────────────────── */
 
 const categories = [
-  { icon: "🏺", name: "Pottery",  count: 124 },
-  { icon: "💍", name: "Jewelry",  count: 238 },
-  { icon: "🧵", name: "Textiles", count: 95  },
-  { icon: "🕯️", name: "Candles",  count: 77  },
-  { icon: "🖼️", name: "Art",      count: 183 },
-  { icon: "🪵", name: "Woodwork", count: 61  },
-  { icon: "🧸", name: "Toys",     count: 44  },
-  { icon: "🌿", name: "Botanicals",count: 59 },
-];
-
-const products = [
-  {
-    id: 1, emoji: "🏺", bg: "#C4956A",
-    badge: "Bestseller",
-    seller: "Maria's Studio",
-    name: "Hand-thrown Terracotta Bowl",
-    price: "$48.00", rating: "★★★★★", reviews: 42,
-  },
-  {
-    id: 2, emoji: "💍", bg: "#D4A76A",
-    badge: "New",
-    seller: "Luna Jewelry",
-    name: "Sterling Silver Leaf Pendant",
-    price: "$72.00", rating: "★★★★★", reviews: 28,
-  },
-  {
-    id: 3, emoji: "🧵", bg: "#A8836A",
-    badge: null,
-    seller: "Woven Stories",
-    name: "Hand-woven Merino Throw",
-    price: "$125.00", rating: "★★★★☆", reviews: 17,
-  },
-  {
-    id: 4, emoji: "🕯️", bg: "#C9A87C",
-    badge: null,
-    seller: "Calm & Craft",
-    name: "Soy Lavender Pillar Candle",
-    price: "$28.00", rating: "★★★★★", reviews: 64,
-  },
-  {
-    id: 5, emoji: "🖼️", bg: "#9E7A5E",
-    badge: "Featured",
-    seller: "Canvas & Clay",
-    name: "Abstract Watercolor Print",
-    price: "$95.00", rating: "★★★★★", reviews: 11,
-  },
-  {
-    id: 6, emoji: "🪵", bg: "#8B6347",
-    badge: null,
-    seller: "Oak & Grain",
-    name: "Reclaimed Oak Serving Board",
-    price: "$64.00", rating: "★★★★☆", reviews: 33,
-  },
+  { icon: "🏺", name: "Pottery",    count: 124 },
+  { icon: "💍", name: "Jewelry",    count: 238 },
+  { icon: "🧵", name: "Textiles",   count: 95  },
+  { icon: "🕯️", name: "Candles",    count: 77  },
+  { icon: "🖼️", name: "Art",        count: 183 },
+  { icon: "🪵", name: "Woodwork",   count: 61  },
+  { icon: "🧸", name: "Toys",       count: 44  },
+  { icon: "🌿", name: "Botanicals", count: 59  },
 ];
 
 const artisans = [
-  { emoji: "👩‍🎨", bg: "#E8C4A0", name: "Maria Santos",   craft: "Pottery",  items: 34 },
-  { emoji: "💎", bg: "#D4C4E0",   name: "Luna Park",     craft: "Jewelry",  items: 51 },
-  { emoji: "🧶", bg: "#C4D4B0",   name: "Anya Weaver",   craft: "Textiles", items: 22 },
-  { emoji: "🔨", bg: "#D0B8A0",   name: "James Oak",     craft: "Woodwork", items: 18 },
+  { emoji: "👩‍🎨", bg: "#E8C4A0", name: "Maria Santos", craft: "Pottery",  items: 34 },
+  { emoji: "💎",  bg: "#D4C4E0", name: "Luna Park",    craft: "Jewelry",  items: 51 },
+  { emoji: "🧶",  bg: "#C4D4B0", name: "Anya Weaver",  craft: "Textiles", items: 22 },
+  { emoji: "🔨",  bg: "#D0B8A0", name: "James Oak",    craft: "Woodwork", items: 18 },
 ];
+
+/* ─── Category emoji fallback map ────────────────────── */
+
+const categoryEmoji: Record<string, string> = {
+  Pottery:    "🏺",
+  Jewelry:    "💍",
+  Textiles:   "🧵",
+  Candles:    "🕯️",
+  Art:        "🖼️",
+  Woodwork:   "🪵",
+  Toys:       "🧸",
+  Botanicals: "🌿",
+  Other:      "🛍️",
+};
 
 /* ─── Component ───────────────────────────────────────── */
 
-export default function HomePage() {
+export default async function HomePage() {
+  const featuredProducts = await prisma.product.findMany({
+    where:   { status: "active" },
+    orderBy: { createdAt: "desc" },
+    take:    6,
+    include: { seller: { select: { name: true } } },
+  });
+
   return (
     <>
-      {/* ── Navbar ── */}
-
       <main id="main-content">
 
         {/* ── Hero ── */}
@@ -97,8 +72,8 @@ export default function HomePage() {
                 pieces that are as individual as you are.
               </p>
               <div className="hero-ctas fade-up fade-up-2">
-                <a href="/shop"  className="btn-primary">Shop Now</a>
-                <a href="/sell"  className="btn-outline">Start Selling</a>
+                <a href="/shop" className="btn-primary">Shop Now</a>
+                <a href="/sell" className="btn-outline">Start Selling</a>
               </div>
               <div className="hero-stats fade-up fade-up-3" aria-label="Platform statistics">
                 <div>
@@ -173,48 +148,68 @@ export default function HomePage() {
               </div>
               <a href="/shop" className="btn-outline">View all products</a>
             </div>
-            <div className="products-grid" role="list">
-              {products.map((p) => (
-                <article key={p.id} className="product-card" role="listitem">
-                  <div className="product-img">
-                    <div
-                      className="product-img-bg"
-                      style={{ background: `linear-gradient(135deg, ${p.bg} 0%, ${p.bg}cc 100%)` }}
-                      aria-hidden="true"
-                    >
-                      {p.emoji}
+
+            {featuredProducts.length === 0 ? (
+              <div className="empty-state" role="status">
+                <div className="empty-state-icon">🛍️</div>
+                <h3>No products yet</h3>
+                <p>Check back soon — artisans are adding new items daily.</p>
+              </div>
+            ) : (
+              <div className="products-grid" role="list">
+                {featuredProducts.map((p) => (
+                  <article key={p.id} className="product-card" role="listitem">
+                    <div className="product-img">
+                      {p.image ? (
+                        <img
+                          src={p.image}
+                          alt={p.name}
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      ) : (
+                        <div
+                          className="product-img-bg"
+                          style={{
+                            background: "var(--border)",
+                            height: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "3rem",
+                          }}
+                          aria-hidden="true"
+                        >
+                          {categoryEmoji[p.category] ?? "🛍️"}
+                        </div>
+                      )}
+                      <button
+                        className="product-wishlist"
+                        aria-label={`Save ${p.name} to wishlist`}
+                      >
+                        🤍
+                      </button>
                     </div>
-                    {p.badge && (
-                      <span className="product-badge">{p.badge}</span>
-                    )}
-                    <button className="product-wishlist" aria-label={`Save ${p.name} to wishlist`}>
-                      🤍
-                    </button>
-                  </div>
-                  <div className="product-info">
-                    <p className="product-seller">{p.seller}</p>
-                    <h3 className="product-name">
-                      <a href={`/products/${p.id}`}>{p.name}</a>
-                    </h3>
-                    <div className="product-footer">
-                      <p className="product-price">{p.price}</p>
-                      <div className="product-rating" aria-label={`Rated ${p.rating.replace(/★/g, '').length} out of 5`}>
-                        <span className="stars" aria-hidden="true">{p.rating}</span>
-                        <span className="rating-count">({p.reviews})</span>
+                    <div className="product-info">
+                      <p className="product-seller">{p.seller.name}</p>
+                      <h3 className="product-name">
+                        <a href={`/products/${p.id}`}>{p.name}</a>
+                      </h3>
+                      <div className="product-footer">
+                        <p className="product-price">${p.price.toFixed(2)}</p>
                       </div>
+                      <AddToCartButton
+                        id={p.id}
+                        name={p.name}
+                        seller={p.seller.name ?? ""}
+                        price={p.price}
+                        emoji={categoryEmoji[p.category] ?? "🛍️"}
+                        bg="var(--terracotta)"
+                      />
                     </div>
-                    <AddToCartButton
-                      id={String(p.id)}
-                      name={p.name}
-                      seller={p.seller}
-                      price={Number(p.price)} 
-                      emoji={p.emoji}
-                      bg={p.bg}
-                    />
-                  </div>
-                </article>
-              ))}
-            </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
