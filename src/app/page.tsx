@@ -73,7 +73,7 @@ export default async function HomePage() {
               </p>
               <div className="hero-ctas fade-up fade-up-2">
                 <a href="/shop" className="btn-primary">Shop Now</a>
-                <a href="/signup?role=seller" className="btn-outline">Start Selling</a>
+                <a href="/seller/dashboard" className="btn-outline">Start Selling</a>
               </div>
               <div className="hero-stats fade-up fade-up-3" aria-label="Platform statistics">
                 <div>
@@ -256,7 +256,7 @@ export default async function HomePage() {
               <h2 id="cta-heading">Are you an artisan?</h2>
               <p>Join thousands of creators selling their handcrafted goods on Handcrafted Haven.</p>
             </div>
-            <a href="/signup?role=seller" className="btn-cream">Start Selling Today</a>
+            <a href="/seller/dashboard" className="btn-cream">Start Selling Today</a>
           </div>
         </section>
 
