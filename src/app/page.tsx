@@ -73,7 +73,7 @@ export default async function HomePage() {
               </p>
               <div className="hero-ctas fade-up fade-up-2">
                 <a href="/shop" className="btn-primary">Shop Now</a>
-                <a href="/sell" className="btn-outline">Start Selling</a>
+                <a href="/signup?role=seller" className="btn-outline">Start Selling</a>
               </div>
               <div className="hero-stats fade-up fade-up-3" aria-label="Platform statistics">
                 <div>
@@ -123,7 +123,7 @@ export default async function HomePage() {
               {categories.map((cat) => (
                 <a
                   key={cat.name}
-                  href={`/shop?category=${cat.name.toLowerCase()}`}
+                  href={`/shop?category=${cat.name}`}
                   className="category-card"
                   role="listitem"
                   aria-label={`${cat.name} — ${cat.count} products`}
@@ -285,7 +285,7 @@ export default async function HomePage() {
             <div>
               <p className="footer-col-title">Sell</p>
               <ul className="footer-links">
-                <li><a href="/sell">Start Selling</a></li>
+                <li><a href="/signup?role=seller">Start Selling</a></li>
                 <li><a href="/seller-guide">Seller Guide</a></li>
                 <li><a href="/seller-faq">FAQ</a></li>
               </ul>
