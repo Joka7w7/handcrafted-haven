@@ -1,26 +1,8 @@
 // src/app/search/page.tsx
 
 import type { Metadata } from "next";
+import { prisma } from "@/lib/prisma";
 import { AddToCartButton } from "@/components/AddToCartButton";
-
-const ALL_PRODUCTS = [
-  { id: 1,  emoji: "🏺", bg: "#C4956A", seller: "Maria's Studio",  name: "Hand-thrown Terracotta Bowl",   price: 48,  rating: 5, reviews: 42, category: "Pottery"    },
-  { id: 2,  emoji: "💍", bg: "#D4A76A", seller: "Luna Jewelry",    name: "Sterling Silver Leaf Pendant",  price: 72,  rating: 5, reviews: 28, category: "Jewelry"    },
-  { id: 3,  emoji: "🧵", bg: "#A8836A", seller: "Woven Stories",   name: "Hand-woven Merino Throw",       price: 125, rating: 4, reviews: 17, category: "Textiles"   },
-  { id: 4,  emoji: "🕯️", bg: "#C9A87C", seller: "Calm & Craft",    name: "Soy Lavender Pillar Candle",    price: 28,  rating: 5, reviews: 64, category: "Candles"    },
-  { id: 5,  emoji: "🖼️", bg: "#9E7A5E", seller: "Canvas & Clay",   name: "Abstract Watercolor Print",     price: 95,  rating: 5, reviews: 11, category: "Art"        },
-  { id: 6,  emoji: "🪵", bg: "#8B6347", seller: "Oak & Grain",     name: "Reclaimed Oak Serving Board",   price: 64,  rating: 4, reviews: 33, category: "Woodwork"   },
-  { id: 7,  emoji: "🧸", bg: "#D4A878", seller: "Cozy Crafts",     name: "Hand-knit Amigurumi Bear",      price: 36,  rating: 5, reviews: 19, category: "Toys"       },
-  { id: 8,  emoji: "🌿", bg: "#8BAB7E", seller: "Herb Haven",      name: "Dried Lavender Bundle",         price: 18,  rating: 5, reviews: 52, category: "Botanicals" },
-  { id: 9,  emoji: "🏺", bg: "#B8836A", seller: "Clay & Fire",     name: "Speckled Glaze Mug Set",        price: 55,  rating: 4, reviews: 24, category: "Pottery"    },
-];
-
-const ALL_SELLERS = [
-  { id: "maria-santos",  emoji: "👩‍🎨", bg: "#E8C4A0", name: "Maria Santos",  craft: "Pottery",    items: 34 },
-  { id: "luna-jewelry",  emoji: "💎",   bg: "#D4C4E0", name: "Luna Jewelry",  craft: "Jewelry",    items: 51 },
-  { id: "woven-stories", emoji: "🧶",   bg: "#C4D4B0", name: "Anya Weaver",   craft: "Textiles",   items: 22 },
-  { id: "oak-grain",     emoji: "🔨",   bg: "#D0B8A0", name: "James Oak",     craft: "Woodwork",   items: 18 },
-];
 
 export async function generateMetadata({
   searchParams,
@@ -39,26 +21,54 @@ export default async function SearchPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q } = await searchParams;
-  const query = q?.trim().toLowerCase() ?? "";
+  const query = q?.trim() ?? "";
 
-  const matchedProducts = query
-    ? ALL_PRODUCTS.filter(
-        (p) =>
-          p.name.toLowerCase().includes(query) ||
-          p.seller.toLowerCase().includes(query) ||
-          p.category.toLowerCase().includes(query)
-      )
-    : [];
+  // Only hit the DB when there's actually a query
+  const [products, sellers] = query
+    ? await Promise.all([
+        prisma.product.findMany({
+          where: {
+            status: "active",
+            OR: [
+              { name:        { contains: query } },
+              { category:    { contains: query } },
+              { description: { contains: query } },
+              { seller: { name: { contains: query } } },
+            ],
+          },
+          include: {
+            seller:  { select: { id: true, name: true } },
+            reviews: { select: { rating: true } },
+          },
+          orderBy: { createdAt: "desc" },
+        }),
+        prisma.user.findMany({
+          where: {
+            role:   "seller",
+            seller: { isNot: null },
+            OR: [
+              { name:   { contains: query } },
+              { seller: { craft:    { contains: query } } },
+              { seller: { shopName: { contains: query } } },
+            ],
+          },
+          include: {
+            seller:   true,
+            products: { where: { status: "active" }, select: { id: true } },
+          },
+        }),
+      ])
+    : [[], []];
 
-  const matchedSellers = query
-    ? ALL_SELLERS.filter(
-        (s) =>
-          s.name.toLowerCase().includes(query) ||
-          s.craft.toLowerCase().includes(query)
-      )
-    : [];
+  // Compute average rating for each product
+  const productsWithRating = products.map((p) => {
+    const avg = p.reviews.length
+      ? p.reviews.reduce((sum, r) => sum + r.rating, 0) / p.reviews.length
+      : 0;
+    return { ...p, avgRating: Math.round(avg), reviewCount: p.reviews.length };
+  });
 
-  const totalResults = matchedProducts.length + matchedSellers.length;
+  const totalResults = products.length + sellers.length;
 
   return (
     <main>
@@ -105,7 +115,7 @@ export default async function SearchPage({
         )}
 
         {/* Matched sellers */}
-        {matchedSellers.length > 0 && (
+        {sellers.length > 0 && (
           <section aria-labelledby="sellers-heading" style={{ marginBottom: "3rem" }}>
             <h2
               id="sellers-heading"
@@ -114,20 +124,32 @@ export default async function SearchPage({
               Artisans
             </h2>
             <div className="artisans-grid" role="list">
-              {matchedSellers.map((s) => (
+              {sellers.map((s) => (
                 <a
                   key={s.id}
                   href={`/sellers/${s.id}`}
                   className="artisan-card"
                   role="listitem"
-                  aria-label={`${s.name} — ${s.craft}`}
+                  aria-label={`${s.name} — ${s.seller?.craft ?? "Artisan"}`}
                 >
-                  <div className="artisan-avatar" style={{ background: s.bg }} aria-hidden="true">
-                    {s.emoji}
+                  <div
+                    className="artisan-avatar"
+                    style={{ background: "var(--sand-light)" }}
+                    aria-hidden="true"
+                  >
+                    {s.image ? (
+                      <img
+                        src={s.image}
+                        alt={s.name ?? ""}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }}
+                      />
+                    ) : (
+                      "👤"
+                    )}
                   </div>
-                  <p className="artisan-name">{s.name}</p>
-                  <p className="artisan-craft">{s.craft}</p>
-                  <p className="artisan-items">{s.items} listings</p>
+                  <p className="artisan-name">{s.seller?.shopName ?? s.name}</p>
+                  <p className="artisan-craft">{s.seller?.craft ?? "Artisan"}</p>
+                  <p className="artisan-items">{s.products.length} listings</p>
                 </a>
               ))}
             </div>
@@ -135,7 +157,7 @@ export default async function SearchPage({
         )}
 
         {/* Matched products */}
-        {matchedProducts.length > 0 && (
+        {productsWithRating.length > 0 && (
           <section aria-labelledby="products-heading">
             <h2
               id="products-heading"
@@ -144,41 +166,51 @@ export default async function SearchPage({
               Products
             </h2>
             <div className="products-grid" role="list">
-              {matchedProducts.map((p) => (
+              {productsWithRating.map((p) => (
                 <article key={p.id} className="product-card" role="listitem">
                   <div className="product-img">
-                    <div
-                      className="product-img-bg"
-                      style={{ background: p.bg }}
-                      aria-hidden="true"
-                    >
-                      {p.emoji}
-                    </div>
+                    {p.image ? (
+                      <img
+                        src={p.image}
+                        alt={p.name}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    ) : (
+                      <div
+                        className="product-img-bg"
+                        style={{ background: "var(--border)", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "3rem" }}
+                        aria-hidden="true"
+                      >
+                        🛍️
+                      </div>
+                    )}
                     <button className="product-wishlist" aria-label={`Save ${p.name} to wishlist`}>
                       🤍
                     </button>
                   </div>
                   <div className="product-info">
-                    <p className="product-seller">{p.seller}</p>
+                    <p className="product-seller">{p.seller.name}</p>
                     <h3 className="product-name">
                       <a href={`/products/${p.id}`}>{p.name}</a>
                     </h3>
                     <div className="product-footer">
                       <p className="product-price">${p.price.toFixed(2)}</p>
-                      <div className="product-rating" aria-label={`${p.rating} out of 5 stars`}>
-                        <span className="stars" aria-hidden="true">
-                          {"★".repeat(p.rating)}{"☆".repeat(5 - p.rating)}
-                        </span>
-                        <span className="rating-count">({p.reviews})</span>
-                      </div>
+                      {p.reviewCount > 0 && (
+                        <div className="product-rating" aria-label={`${p.avgRating} out of 5 stars`}>
+                          <span className="stars" aria-hidden="true">
+                            {"★".repeat(p.avgRating)}{"☆".repeat(5 - p.avgRating)}
+                          </span>
+                          <span className="rating-count">({p.reviewCount})</span>
+                        </div>
+                      )}
                     </div>
                     <AddToCartButton
-                      id={String(p.id)}
+                      id={p.id}
                       name={p.name}
-                      seller={p.seller}
+                      seller={p.seller.name ?? ""}
                       price={p.price}
-                      emoji={p.emoji}
-                      bg={p.bg}
+                      emoji="🛍️"
+                      bg="var(--terracotta)"
                     />
                   </div>
                 </article>
